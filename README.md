@@ -2,8 +2,8 @@
 
 The two api endpoints are as follows:
 
-/clock/time
+/clock/time <br />
 /clock/time/{timezone}
-
-/clock/history
+<br /><br />
+/clock/history<br />
 /clock/history/{index}
