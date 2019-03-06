@@ -1,0 +1,105 @@
+﻿<h4>Welcome, Clockwork Project @ViewData["Version"] on @ViewData["Runtime"]!</h4>
+
+<h2 class="large">Resize the screen: Large!</h2>
+<h2 class="medium ">Resize the screen: Medium!</h2>
+<h2 class="small">Resize the screen: Small!</h2>
+
+<button type="submit" onclick="UserAction()">Get the time</button>
+
+<input type="text" placeholder="Enter timezone..." id="timezone"/>
+
+<h4>Current Time: <span id="currentTime"></span></h4>
+<p id="output">Click button above to get the time!</p>
+
+<br /><br />
+
+<h4>Past Requests</h4>
+<p id="pastTicks"></p>
+
+<button onClick="lessHistory()"><</button>
+<button onclick="moreHistory()">></button>
+
+(<span id="pageCount"></span>)
+
+<script>
+    function UserAction() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                document.getElementById("output").innerHTML = this.responseText;
+                var displayTime = JSON.parse(this.responseText).time;
+                var index = displayTime.indexOf("T") + 1;
+                document.getElementById("currentTime").innerHTML = displayTime.substring(index, index + 5);
+                makeHistoryCall();
+            }
+        };
+
+        xhttp.open("GET", "http://localhost:49704/clock/time/" + document.getElementById("timezone").value, true);
+        xhttp.setRequestHeader("Content-type", "application/json");
+        xhttp.send();
+
+    }
+
+    //
+    //  Could easily cache this history client side so we dont make an extra call for data we already downloaded.
+    //
+    var pageIndex = 0;
+    var pageTotal = 0;
+
+    function makeHistoryCall() {
+        var historyHttp = new XMLHttpRequest();
+        historyHttp.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                var dataElem = JSON.parse(this.responseText);
+                var pastTicksView = document.getElementById("pastTicks");
+                pastTicksView.innerHTML = "";
+                pageTotal = dataElem.total;
+                dataElem.pastTicks.forEach(function (item) {
+                    pastTicksView.innerHTML = pastTicksView.innerHTML + convertItemToStr(item) + "<br><br><br>";
+                });
+                if (pageTotal == 0) {
+                    pageTotal = 10;
+                }
+                document.getElementById("pageCount").innerHTML = ((pageIndex / 10) + 1) + "/" + Math.ceil(pageTotal / 10);
+            }
+        };
+
+        historyHttp.open("GET", "http://localhost:49704/clock/history/" + pageIndex, true);
+        historyHttp.setRequestHeader("Content-type", "application/json");
+        historyHttp.send();
+    }
+
+    makeHistoryCall();
+
+    //
+    //  Could render this from a template but not going to set up the front end to that extent
+    //
+    function convertItemToStr(item) {
+        return item.currentTimeQueryId + ": " +
+               " | Time: " + item.time +
+               " | ClientIp: " + item.clientIp +
+               " | UTCTime: " + item.utcTime +
+               " | RequestedTimezone: " + item.requestedTimezone	
+    }
+
+
+    function moreHistory() {
+        if (pageIndex < pageTotal) {
+            if (pageIndex + 10 >= pageTotal) {
+                return;
+            }
+            pageIndex = pageIndex + 10;
+            makeHistoryCall()
+        }
+    }
+
+    function lessHistory() {
+        if (pageIndex != 0) {
+            pageIndex = pageIndex - 10;
+            if (pageIndex < 0) {
+                pageIndex = 0;
+            }
+            makeHistoryCall()
+        }
+    }
+</script>
